@@ -1,0 +1,3058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Plan Annotator</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #141417;
+            --bg-tertiary: #1c1c21;
+            --bg-elevated: #242429;
+            --border: #2a2a32;
+            --border-active: #4a4a58;
+            --text-primary: #f0f0f2;
+            --text-secondary: #a0a0a8;
+            --text-muted: #606068;
+            --accent: #00d4aa;
+            --accent-dim: #00a88a;
+            --warning: #ffb347;
+            --danger: #ff6b6b;
+            --info: #6bb3ff;
+            --purple: #a78bfa;
+            --grid-color: #1a1a1f;
+            --grid-major: #252530;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            grid-template-rows: 56px 1fr 48px;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--bg-primary);
+        }
+
+        .logo-text {
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Buttons */
+        .btn {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: var(--bg-elevated);
+            border-color: var(--border-active);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dim);
+            border-color: var(--accent-dim);
+        }
+
+        .btn-icon {
+            padding: 8px;
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Left Panel */
+        .left-panel {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-section {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(0, 212, 170, 0.05);
+        }
+
+        .upload-zone svg {
+            width: 32px;
+            height: 32px;
+            stroke: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .upload-zone p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .upload-zone span {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* Tool Buttons */
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+        }
+
+        .tool-btn {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .tool-btn:hover {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .tool-btn.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .tool-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Groups List */
+        .groups-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .group-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .group-item:hover {
+            background: var(--bg-elevated);
+        }
+
+        .group-item.selected {
+            background: var(--bg-elevated);
+            outline: 1px solid var(--accent);
+        }
+
+        .group-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .group-name {
+            flex: 1;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .group-count {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .add-group-btn {
+            width: 100%;
+            margin-top: 8px;
+            justify-content: center;
+        }
+
+        /* Canvas Area */
+        .canvas-container {
+            background: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-bg {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(var(--grid-major) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+            background-size: 10px 10px, 10px 10px, 100px 100px, 100px 100px;
+        }
+
+        #svg-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #svg-canvas svg {
+            position: absolute;
+            transform-origin: 0 0;
+        }
+
+        /* Origin Marker */
+        .origin-marker {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .origin-marker::before,
+        .origin-marker::after {
+            content: '';
+            position: absolute;
+            background: var(--accent);
+        }
+
+        .origin-marker::before {
+            width: 20px;
+            height: 2px;
+            top: -1px;
+            left: 0;
+        }
+
+        .origin-marker::after {
+            width: 2px;
+            height: 20px;
+            top: 0;
+            left: -1px;
+        }
+
+        .origin-label {
+            position: absolute;
+            top: 4px;
+            left: 6px;
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            white-space: nowrap;
+        }
+
+        /* Scale Line */
+        .scale-indicator {
+            position: absolute;
+            bottom: 60px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            z-index: 100;
+        }
+
+        .scale-bar {
+            height: 4px;
+            background: var(--warning);
+            border-radius: 2px;
+            min-width: 50px;
+        }
+
+        .scale-label {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--warning);
+        }
+
+        /* Right Panel */
+        .right-panel {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            overflow-y: auto;
+        }
+
+        /* Properties */
+        .property-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .property-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            width: 70px;
+            flex-shrink: 0;
+        }
+
+        .property-value {
+            flex: 1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            padding: 6px 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+        }
+
+        .property-value:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        input[type="color"] {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        /* Tags */
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .tag {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: var(--bg-elevated);
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.15s;
+        }
+
+        .tag-remove:hover {
+            opacity: 1;
+        }
+
+        .add-tag-input {
+            flex: 1;
+            min-width: 80px;
+            background: transparent;
+            border: 1px dashed var(--border);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-primary);
+        }
+
+        .add-tag-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            border-style: solid;
+        }
+
+        /* Element List */
+        .element-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .element-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.15s ease;
+        }
+
+        .element-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .element-item.selected {
+            background: var(--bg-elevated);
+            outline: 1px solid var(--accent);
+        }
+
+        .element-icon {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+        }
+
+        .element-type {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--purple);
+            padding: 2px 4px;
+            background: rgba(167, 139, 250, 0.1);
+            border-radius: 3px;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+        }
+
+        .status-left, .status-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            display: flex;
+            gap: 4px;
+            z-index: 100;
+        }
+
+        .zoom-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .zoom-btn:hover {
+            background: var(--bg-elevated);
+        }
+
+        .zoom-level {
+            padding: 0 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Selection Box */
+        .selection-box {
+            position: absolute;
+            border: 1px solid var(--accent);
+            background: rgba(0, 212, 170, 0.1);
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* Tooltips */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 4px 8px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+            z-index: 1000;
+        }
+
+        [data-tooltip]:hover::after {
+            opacity: 1;
+        }
+
+        /* No Selection State */
+        .no-selection {
+            padding: 24px 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .quick-action-btn {
+            padding: 10px;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-active);
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: fixed;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px;
+            min-width: 180px;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            display: none;
+        }
+
+        .context-menu.visible {
+            display: block;
+        }
+
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.1s ease;
+        }
+
+        .context-menu-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .context-menu-item svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-muted);
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 6px 0;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            min-width: 400px;
+            max-width: 90vw;
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .modal-overlay.visible .modal {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        /* Documentation Styles */
+        .docs-section {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .docs-section .section-title {
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .docs-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            resize: vertical;
+            margin-top: 8px;
+        }
+
+        .docs-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .docs-textarea.tall {
+            min-height: 140px;
+        }
+
+        .docs-textarea.code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            min-height: 120px;
+        }
+
+        .docs-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .element-type-row {
+            display: grid;
+            grid-template-columns: 120px 1fr auto;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: start;
+        }
+
+        .element-type-row input {
+            padding: 8px 10px;
+        }
+
+        .element-type-row textarea {
+            min-height: 60px;
+            margin-top: 0;
+        }
+
+        .element-type-row .btn {
+            padding: 8px;
+            margin-top: 0;
+        }
+
+        .zone-def-row {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+        }
+
+        .zone-def-row .zone-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--accent);
+            padding-top: 8px;
+        }
+
+        .zone-def-row textarea {
+            margin-top: 0;
+            min-height: 60px;
+        }
+
+        .markdown-preview {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+        }
+
+        /* Coordinate Display */
+        .coord-display {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            z-index: 100;
+        }
+
+        .coord-display span {
+            color: var(--text-muted);
+        }
+
+        .coord-value {
+            color: var(--text-primary);
+            margin-left: 4px;
+        }
+
+        /* Highlighting selected SVG elements */
+        .svg-element-highlight {
+            outline: 2px solid var(--accent) !important;
+            outline-offset: 2px;
+        }
+
+        .svg-element-hover {
+            outline: 1px dashed var(--info) !important;
+            outline-offset: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <path d="M3 9h18M9 21V9"/>
+                    </svg>
+                </div>
+                <span class="logo-text">SVG Plan Annotator</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn" id="save-project-btn" data-tooltip="Save Project (Ctrl+S)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Save
+                </button>
+                <button class="btn" id="load-project-btn" data-tooltip="Load Project">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                        <line x1="12" y1="11" x2="12" y2="17"/>
+                        <polyline points="9 14 12 11 15 14"/>
+                    </svg>
+                </button>
+                <input type="file" id="load-project-input" accept=".json" style="display: none;">
+                <div style="width: 1px; height: 24px; background: var(--border); margin: 0 4px;"></div>
+                <button class="btn" id="undo-btn" data-tooltip="Undo (Ctrl+Z)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7v6h6M3 13c0-4.97 4.03-9 9-9s9 4.03 9 9-4.03 9-9 9a9 9 0 01-6.36-2.64"/>
+                    </svg>
+                </button>
+                <button class="btn" id="redo-btn" data-tooltip="Redo (Ctrl+Y)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 7v6h-6M21 13c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9a9 9 0 006.36-2.64"/>
+                    </svg>
+                </button>
+                <button class="btn btn-primary" id="export-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    Export SVG + Docs
+                </button>
+            </div>
+        </header>
+
+        <!-- Left Panel -->
+        <aside class="left-panel">
+            <div class="panel-section">
+                <div class="section-title">Import</div>
+                <div class="upload-zone" id="upload-zone">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                    </svg>
+                    <p>Drop SVG here or <span>browse</span></p>
+                </div>
+                <input type="file" id="file-input" accept=".svg">
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Tools</div>
+                <div class="tool-grid">
+                    <button class="tool-btn active" id="tool-select" data-tooltip="Select (V)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+                        </svg>
+                    </button>
+                    <button class="tool-btn" id="tool-pan" data-tooltip="Pan (H)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+                        </svg>
+                    </button>
+                    <button class="tool-btn" id="tool-origin" data-tooltip="Set Origin (O)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                        </svg>
+                    </button>
+                    <button class="tool-btn" id="tool-scale" data-tooltip="Set Scale (S)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M2 12h20M6 8l-4 4 4 4M18 8l4 4-4 4"/>
+                        </svg>
+                    </button>
+                    <button class="tool-btn" id="tool-measure" data-tooltip="Measure (M)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.3 15.3a2.4 2.4 0 01 0 3.4l-2.6 2.6a2.4 2.4 0 01-3.4 0L2.7 8.7a2.4 2.4 0 010-3.4l2.6-2.6a2.4 2.4 0 013.4 0l12.6 12.6z"/>
+                            <path d="M14.5 12.5L11 9M11 15l-1.5-1.5M7.5 11.5L6 10"/>
+                        </svg>
+                    </button>
+                    <button class="tool-btn" id="tool-rect-select" data-tooltip="Rectangle Select (R)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2">
+                            <rect x="3" y="3" width="18" height="18" rx="1"/>
+                        </svg>
+                    </button>
+                    <button class="tool-btn" id="tool-group" data-tooltip="Group (G)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="2" width="8" height="8" rx="1"/>
+                            <rect x="14" y="2" width="8" height="8" rx="1"/>
+                            <rect x="2" y="14" width="8" height="8" rx="1"/>
+                            <rect x="14" y="14" width="8" height="8" rx="1"/>
+                        </svg>
+                    </button>
+                    <button class="tool-btn" id="tool-ungroup" data-tooltip="Ungroup (U)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="2" width="8" height="8" rx="1"/>
+                            <rect x="14" y="14" width="8" height="8" rx="1"/>
+                            <path d="M14 6h4M6 14v4"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-section" style="flex: 1; min-height: 0;">
+                <div class="section-title">Groups</div>
+                <div class="groups-list" id="groups-list">
+                    <!-- Groups populated dynamically -->
+                </div>
+                <button class="btn add-group-btn" id="add-group-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    New Group
+                </button>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Quick Actions</div>
+                <div class="quick-actions">
+                    <button class="btn quick-action-btn" id="select-all-btn">Select All</button>
+                    <button class="btn quick-action-btn" id="deselect-btn">Deselect</button>
+                    <button class="btn quick-action-btn" id="auto-detect-btn">Auto-Detect</button>
+                    <button class="btn quick-action-btn" id="reset-view-btn">Reset View</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Canvas -->
+        <main class="canvas-container" id="canvas-container">
+            <div class="canvas-bg"></div>
+            <div id="svg-canvas"></div>
+            
+            <div class="coord-display" id="coord-display">
+                <span>X:</span><span class="coord-value" id="coord-x">0</span>
+                <span style="margin-left: 12px;">Y:</span><span class="coord-value" id="coord-y">0</span>
+            </div>
+
+            <div class="origin-marker" id="origin-marker" style="display: none;">
+                <span class="origin-label">0,0</span>
+            </div>
+
+            <div class="scale-indicator" id="scale-indicator" style="display: none;">
+                <div class="scale-bar" id="scale-bar"></div>
+                <span class="scale-label" id="scale-label">1m</span>
+            </div>
+
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoom-out">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14"/>
+                    </svg>
+                </button>
+                <div class="zoom-level" id="zoom-level">100%</div>
+                <button class="zoom-btn" id="zoom-in">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                </button>
+                <button class="zoom-btn" id="zoom-fit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                    </svg>
+                </button>
+            </div>
+        </main>
+
+        <!-- Right Panel -->
+        <aside class="right-panel">
+            <div class="panel-section">
+                <div class="section-title">Properties</div>
+                <div id="properties-content">
+                    <div class="no-selection">
+                        Select an element to view properties
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Elements</div>
+                <div class="element-list" id="element-list">
+                    <!-- Elements populated dynamically -->
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Plan Metadata</div>
+                <div class="property-row">
+                    <span class="property-label">Origin</span>
+                    <input type="text" class="property-value" id="meta-origin" value="Not set" readonly>
+                </div>
+                <div class="property-row">
+                    <span class="property-label">Scale</span>
+                    <input type="text" class="property-value" id="meta-scale" value="Not set" readonly>
+                </div>
+                <div class="property-row">
+                    <span class="property-label">Units</span>
+                    <select class="property-value" id="meta-units">
+                        <option value="m">Meters</option>
+                        <option value="cm">Centimeters</option>
+                        <option value="mm">Millimeters</option>
+                        <option value="ft">Feet</option>
+                        <option value="in">Inches</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Documentation</div>
+                <button class="btn" id="open-docs-btn" style="width: 100%;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                    Edit Project Context
+                </button>
+            </div>
+        </aside>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <div class="status-item">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Ready</span>
+                </div>
+            </div>
+            <div class="status-right">
+                <span id="element-count">0 elements</span>
+                <span id="selection-count">0 selected</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" data-action="tag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                <circle cx="7" cy="7" r="1"/>
+            </svg>
+            Add Tag
+        </div>
+        <div class="context-menu-item" data-action="color">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+            Set Color
+        </div>
+        <div class="context-menu-item" data-action="set-origin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+            </svg>
+            Set as Origin
+        </div>
+        <div class="context-menu-item" data-action="set-scale">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 12h20M6 8l-4 4 4 4M18 8l4 4-4 4"/>
+            </svg>
+            Use for Scale
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="group">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="8" height="8" rx="1"/>
+                <rect x="14" y="2" width="8" height="8" rx="1"/>
+                <rect x="2" y="14" width="8" height="8" rx="1"/>
+                <rect x="14" y="14" width="8" height="8" rx="1"/>
+            </svg>
+            Add to Group
+        </div>
+        <div class="context-menu-item" data-action="remove-group">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="8" height="8" rx="1"/>
+                <rect x="14" y="14" width="8" height="8" rx="1"/>
+                <path d="M14 6h4M6 14v4"/>
+            </svg>
+            Remove from Group
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="copy-id">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+            Copy ID
+        </div>
+    </div>
+
+    <!-- Scale Modal -->
+    <div class="modal-overlay" id="scale-modal">
+        <div class="modal">
+            <div class="modal-title">Set Scale Reference</div>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 8px;">
+                Enter the real-world measurement this element represents:
+            </p>
+            <p id="scale-element-info" style="color: var(--accent); font-size: 12px; font-family: 'JetBrains Mono', monospace; margin-bottom: 16px; padding: 8px; background: var(--bg-tertiary); border-radius: 4px;">
+                Element length: -- px
+            </p>
+            <div class="property-row">
+                <span class="property-label">Real length</span>
+                <input type="number" class="property-value" id="scale-input" value="1" min="0.01" step="0.1">
+                <select class="property-value" id="scale-unit" style="width: 80px;">
+                    <option value="m">m</option>
+                    <option value="cm">cm</option>
+                    <option value="mm">mm</option>
+                    <option value="ft">ft</option>
+                    <option value="in">in</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="scale-cancel">Cancel</button>
+                <button class="btn btn-primary" id="scale-confirm">Set Scale</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documentation Modal -->
+    <div class="modal-overlay" id="docs-modal">
+        <div class="modal" style="width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-title">Project Context Documentation</div>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
+                This documentation exports alongside your SVG to provide context for coding agents working with tracking and response systems.
+            </p>
+            
+            <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
+                <!-- Project Overview -->
+                <div class="docs-section">
+                    <div class="section-title">Project Overview</div>
+                    <input type="text" class="property-value" id="doc-project-name" placeholder="Project name (e.g., Storefront Interactive Installation)">
+                    <textarea class="docs-textarea" id="doc-project-desc" placeholder="Brief description of the installation, its purpose, and the interaction goals..."></textarea>
+                </div>
+
+                <!-- Coordinate System -->
+                <div class="docs-section">
+                    <div class="section-title">Coordinate System & Orientation</div>
+                    <textarea class="docs-textarea" id="doc-coords" placeholder="Describe the coordinate system orientation. E.g., 'Origin is at the left edge of the storefront, ground level. +X runs along the window toward the right. +Y extends into the space (toward the street). The tracking camera views from above, looking down.'"></textarea>
+                </div>
+
+                <!-- Tracking System -->
+                <div class="docs-section">
+                    <div class="section-title">Tracking System</div>
+                    <div class="property-row">
+                        <span class="property-label">Method</span>
+                        <select class="property-value" id="doc-tracking-method">
+                            <option value="">Select...</option>
+                            <option value="yolo-camera">YOLO + Camera</option>
+                            <option value="lidar">LiDAR</option>
+                            <option value="mmwave">mmWave Radar</option>
+                            <option value="depth-camera">Depth Camera</option>
+                            <option value="multiple">Multiple Sensors</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <textarea class="docs-textarea" id="doc-tracking-details" placeholder="Camera position, field of view, tracking resolution, update rate, coordinate output format, any transforms needed between tracker coords and plan coords..."></textarea>
+                </div>
+
+                <!-- Element Types -->
+                <div class="docs-section">
+                    <div class="section-title">Element Type Definitions</div>
+                    <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 12px;">
+                        Define what each element type represents and how it should be addressed in code.
+                    </p>
+                    <div id="element-type-definitions">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <button class="btn" id="add-element-type-btn" style="margin-top: 8px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        Add Element Type
+                    </button>
+                </div>
+
+                <!-- Zones -->
+                <div class="docs-section">
+                    <div class="section-title">Zone Definitions</div>
+                    <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 12px;">
+                        Describe the purpose and behavior expectations for each zone.
+                    </p>
+                    <div id="zone-definitions">
+                        <!-- Populated dynamically based on data-zone attributes -->
+                    </div>
+                </div>
+
+                <!-- Interaction Rules -->
+                <div class="docs-section">
+                    <div class="section-title">Interaction Rules & Behaviors</div>
+                    <textarea class="docs-textarea tall" id="doc-interactions" placeholder="Describe the expected behaviors:
+- What happens when someone enters a zone?
+- How should panels respond to proximity?
+- Are there different modes or states?
+- What are the timing/animation expectations?
+- Any special cases (multiple people, edges, transitions)?"></textarea>
+                </div>
+
+                <!-- Data Structures -->
+                <div class="docs-section">
+                    <div class="section-title">Expected Data Structures</div>
+                    <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">
+                        Define how tracking data will be provided to the system.
+                    </p>
+                    <textarea class="docs-textarea code" id="doc-data-structures" placeholder="// Example tracking data format:
+{
+  timestamp: number,      // Unix ms
+  people: [{
+    id: string,           // Tracking ID
+    x: number,            // Meters from origin
+    y: number,
+    velocity?: {x, y},    // m/s if available
+    confidence: number    // 0-1
+  }]
+}"></textarea>
+                </div>
+
+                <!-- Hardware/Protocol -->
+                <div class="docs-section">
+                    <div class="section-title">Panel Control Interface</div>
+                    <div class="property-row">
+                        <span class="property-label">Protocol</span>
+                        <select class="property-value" id="doc-panel-protocol">
+                            <option value="">Select...</option>
+                            <option value="dmx">DMX512</option>
+                            <option value="artnet">Art-Net</option>
+                            <option value="sacn">sACN (E1.31)</option>
+                            <option value="0-10v">0-10V Analog</option>
+                            <option value="dali">DALI</option>
+                            <option value="mqtt">MQTT</option>
+                            <option value="osc">OSC</option>
+                            <option value="serial">Serial</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <textarea class="docs-textarea" id="doc-panel-details" placeholder="Address mapping, channel assignments, value ranges (0-255, 0-100%, etc.), any grouping or universe info..."></textarea>
+                </div>
+
+                <!-- Additional Notes -->
+                <div class="docs-section">
+                    <div class="section-title">Additional Context for Coding Agent</div>
+                    <textarea class="docs-textarea tall" id="doc-additional" placeholder="Any other context that would help when writing code:
+- Known edge cases
+- Performance constraints
+- Dependencies or existing code to integrate with
+- Testing/simulation notes
+- Physical constraints (cable runs, power, etc.)"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" id="docs-cancel">Cancel</button>
+                <button class="btn" id="docs-preview">Preview Markdown</button>
+                <button class="btn btn-primary" id="docs-save">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Markdown Preview Modal -->
+    <div class="modal-overlay" id="preview-modal">
+        <div class="modal" style="width: 800px; max-height: 90vh;">
+            <div class="modal-title">Markdown Preview</div>
+            <pre class="markdown-preview" id="markdown-preview"></pre>
+            <div class="modal-actions">
+                <button class="btn" id="preview-close">Close</button>
+                <button class="btn btn-primary" id="preview-copy">Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Modal -->
+    <div class="modal-overlay" id="group-modal">
+        <div class="modal">
+            <div class="modal-title">Create New Group</div>
+            <div class="property-row">
+                <span class="property-label">Name</span>
+                <input type="text" class="property-value" id="group-name-input" placeholder="e.g., Zone 1, Light Panels">
+            </div>
+            <div class="property-row">
+                <span class="property-label">Color</span>
+                <input type="color" id="group-color-input" value="#00d4aa">
+                <input type="text" class="property-value" id="group-color-hex" value="#00d4aa" style="flex: 1;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="group-cancel">Cancel</button>
+                <button class="btn btn-primary" id="group-confirm">Create Group</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        const state = {
+            svg: null,
+            svgContent: null,
+            selectedElements: new Set(),
+            groups: [],
+            origin: null,
+            scale: null, // pixels per meter
+            scaleElement: null,
+            scaleReferenceLength: null, // pixel length of reference element
+            scaleReferenceMeters: null, // real-world length in meters
+            scaleUnit: 'm',
+            zoom: 1,
+            pan: { x: 0, y: 0 },
+            tool: 'select',
+            isPanning: false,
+            panStart: { x: 0, y: 0 },
+            undoStack: [],
+            redoStack: [],
+            elementMetadata: new Map(), // stores tags, custom properties per element
+            // Documentation state
+            docs: {
+                projectName: '',
+                projectDesc: '',
+                coordSystem: '',
+                trackingMethod: '',
+                trackingDetails: '',
+                elementTypes: [], // {name, description, addressingNotes}
+                zones: {}, // {zoneId: description}
+                interactions: '',
+                dataStructures: '',
+                panelProtocol: '',
+                panelDetails: '',
+                additionalNotes: ''
+            }
+        };
+
+        // DOM Elements
+        const elements = {
+            uploadZone: document.getElementById('upload-zone'),
+            fileInput: document.getElementById('file-input'),
+            svgCanvas: document.getElementById('svg-canvas'),
+            canvasContainer: document.getElementById('canvas-container'),
+            propertiesContent: document.getElementById('properties-content'),
+            elementList: document.getElementById('element-list'),
+            groupsList: document.getElementById('groups-list'),
+            contextMenu: document.getElementById('context-menu'),
+            coordDisplay: document.getElementById('coord-display'),
+            coordX: document.getElementById('coord-x'),
+            coordY: document.getElementById('coord-y'),
+            originMarker: document.getElementById('origin-marker'),
+            scaleIndicator: document.getElementById('scale-indicator'),
+            scaleBar: document.getElementById('scale-bar'),
+            scaleLabel: document.getElementById('scale-label'),
+            zoomLevel: document.getElementById('zoom-level'),
+            statusText: document.getElementById('status-text'),
+            elementCount: document.getElementById('element-count'),
+            selectionCount: document.getElementById('selection-count'),
+            metaOrigin: document.getElementById('meta-origin'),
+            metaScale: document.getElementById('meta-scale'),
+            scaleModal: document.getElementById('scale-modal'),
+            groupModal: document.getElementById('group-modal'),
+            docsModal: document.getElementById('docs-modal'),
+            previewModal: document.getElementById('preview-modal')
+        };
+
+        // Initialize
+        function init() {
+            setupEventListeners();
+            setupDocsEventListeners();
+            updateStatus('Ready - Drop an SVG file to begin');
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            // File Upload
+            elements.uploadZone.addEventListener('click', () => elements.fileInput.click());
+            elements.fileInput.addEventListener('change', handleFileSelect);
+            elements.uploadZone.addEventListener('dragover', handleDragOver);
+            elements.uploadZone.addEventListener('dragleave', handleDragLeave);
+            elements.uploadZone.addEventListener('drop', handleDrop);
+
+            // Canvas interactions
+            elements.canvasContainer.addEventListener('mousedown', handleCanvasMouseDown);
+            elements.canvasContainer.addEventListener('mousemove', handleCanvasMouseMove);
+            elements.canvasContainer.addEventListener('mouseup', handleCanvasMouseUp);
+            elements.canvasContainer.addEventListener('wheel', handleWheel, { passive: false });
+            elements.canvasContainer.addEventListener('contextmenu', handleContextMenu);
+
+            // Tool buttons
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const toolId = btn.id.replace('tool-', '');
+                    setTool(toolId);
+                });
+            });
+
+            // Zoom controls
+            document.getElementById('zoom-in').addEventListener('click', () => setZoom(state.zoom * 1.25));
+            document.getElementById('zoom-out').addEventListener('click', () => setZoom(state.zoom / 1.25));
+            document.getElementById('zoom-fit').addEventListener('click', fitToView);
+
+            // Quick actions
+            document.getElementById('select-all-btn').addEventListener('click', selectAll);
+            document.getElementById('deselect-btn').addEventListener('click', deselectAll);
+            document.getElementById('auto-detect-btn').addEventListener('click', autoDetectElements);
+            document.getElementById('reset-view-btn').addEventListener('click', resetView);
+
+            // Header actions
+            document.getElementById('export-btn').addEventListener('click', exportSVG);
+            document.getElementById('undo-btn').addEventListener('click', undo);
+            document.getElementById('redo-btn').addEventListener('click', redo);
+
+            // Group actions
+            document.getElementById('add-group-btn').addEventListener('click', showGroupModal);
+
+            // Save/Load project
+            document.getElementById('save-project-btn').addEventListener('click', saveProject);
+            document.getElementById('load-project-btn').addEventListener('click', () => {
+                document.getElementById('load-project-input').click();
+            });
+            document.getElementById('load-project-input').addEventListener('change', loadProject);
+
+            // Context menu
+            document.querySelectorAll('.context-menu-item').forEach(item => {
+                item.addEventListener('click', handleContextMenuAction);
+            });
+
+            // Close context menu on click outside
+            document.addEventListener('click', () => hideContextMenu());
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboard);
+
+            // Modal handlers
+            setupModalHandlers();
+
+            // Color input sync
+            document.getElementById('group-color-input').addEventListener('input', (e) => {
+                document.getElementById('group-color-hex').value = e.target.value;
+            });
+            document.getElementById('group-color-hex').addEventListener('input', (e) => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                    document.getElementById('group-color-input').value = e.target.value;
+                }
+            });
+        }
+
+        // File Handling
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) loadSVGFile(file);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            elements.uploadZone.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            elements.uploadZone.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            elements.uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'image/svg+xml') {
+                loadSVGFile(file);
+            }
+        }
+
+        function loadSVGFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                state.svgContent = e.target.result;
+                renderSVG();
+                updateStatus(`Loaded: ${file.name}`);
+            };
+            reader.readAsText(file);
+        }
+
+        function renderSVG() {
+            elements.svgCanvas.innerHTML = state.svgContent;
+            state.svg = elements.svgCanvas.querySelector('svg');
+            
+            if (state.svg) {
+                // Ensure SVG has proper sizing
+                if (!state.svg.getAttribute('width')) {
+                    state.svg.setAttribute('width', '100%');
+                }
+                if (!state.svg.getAttribute('height')) {
+                    state.svg.setAttribute('height', '100%');
+                }
+
+                // Add IDs to elements that don't have them
+                let idCounter = 1;
+                state.svg.querySelectorAll('*').forEach(el => {
+                    if (!el.id && isSelectableElement(el)) {
+                        el.id = `element-${idCounter++}`;
+                    }
+                });
+
+                // Setup element interaction
+                setupSVGInteraction();
+                updateElementList();
+                fitToView();
+            }
+        }
+
+        function isSelectableElement(el) {
+            const selectableTags = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'g', 'text'];
+            return selectableTags.includes(el.tagName.toLowerCase());
+        }
+
+        function setupSVGInteraction() {
+            if (!state.svg) return;
+
+            state.svg.querySelectorAll('*').forEach(el => {
+                if (isSelectableElement(el)) {
+                    el.style.cursor = 'pointer';
+                    el.addEventListener('mouseenter', () => {
+                        if (state.tool === 'select' && !state.selectedElements.has(el)) {
+                            el.classList.add('svg-element-hover');
+                        }
+                    });
+                    el.addEventListener('mouseleave', () => {
+                        el.classList.remove('svg-element-hover');
+                    });
+                }
+            });
+        }
+
+        // Canvas Interactions
+        function handleCanvasMouseDown(e) {
+            if (e.button === 1 || (e.button === 0 && state.tool === 'pan')) {
+                // Middle click or pan tool
+                state.isPanning = true;
+                state.panStart = { x: e.clientX - state.pan.x, y: e.clientY - state.pan.y };
+                elements.canvasContainer.style.cursor = 'grabbing';
+                return;
+            }
+
+            if (e.button === 0 && state.tool === 'select') {
+                const target = e.target.closest('svg *');
+                if (target && isSelectableElement(target) && state.svg.contains(target)) {
+                    if (e.shiftKey) {
+                        toggleSelection(target);
+                    } else {
+                        selectElement(target);
+                    }
+                } else if (!e.target.closest('.right-panel, .left-panel')) {
+                    deselectAll();
+                }
+            }
+
+            if (e.button === 0 && state.tool === 'origin') {
+                setOrigin(e);
+            }
+
+            if (e.button === 0 && state.tool === 'scale') {
+                const target = e.target.closest('svg *');
+                if (target && isSelectableElement(target)) {
+                    showScaleModal(target);
+                }
+            }
+        }
+
+        function handleCanvasMouseMove(e) {
+            updateCoordinates(e);
+
+            if (state.isPanning) {
+                state.pan.x = e.clientX - state.panStart.x;
+                state.pan.y = e.clientY - state.panStart.y;
+                updateTransform();
+            }
+        }
+
+        function handleCanvasMouseUp(e) {
+            if (state.isPanning) {
+                state.isPanning = false;
+                elements.canvasContainer.style.cursor = state.tool === 'pan' ? 'grab' : 'default';
+            }
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const rect = elements.canvasContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Zoom towards cursor
+            const newZoom = Math.max(0.1, Math.min(10, state.zoom * delta));
+            const zoomRatio = newZoom / state.zoom;
+
+            state.pan.x = x - (x - state.pan.x) * zoomRatio;
+            state.pan.y = y - (y - state.pan.y) * zoomRatio;
+            state.zoom = newZoom;
+
+            updateTransform();
+            updateZoomDisplay();
+        }
+
+        function handleContextMenu(e) {
+            e.preventDefault();
+            const target = e.target.closest('svg *');
+            if (target && isSelectableElement(target) && state.svg.contains(target)) {
+                if (!state.selectedElements.has(target)) {
+                    selectElement(target);
+                }
+                showContextMenu(e.clientX, e.clientY);
+            }
+        }
+
+        // Selection
+        function selectElement(el) {
+            deselectAll();
+            state.selectedElements.add(el);
+            el.classList.add('svg-element-highlight');
+            el.classList.remove('svg-element-hover');
+            updatePropertiesPanel();
+            updateSelectionCount();
+            highlightElementInList(el);
+        }
+
+        function toggleSelection(el) {
+            if (state.selectedElements.has(el)) {
+                state.selectedElements.delete(el);
+                el.classList.remove('svg-element-highlight');
+            } else {
+                state.selectedElements.add(el);
+                el.classList.add('svg-element-highlight');
+                el.classList.remove('svg-element-hover');
+            }
+            updatePropertiesPanel();
+            updateSelectionCount();
+        }
+
+        function deselectAll() {
+            state.selectedElements.forEach(el => {
+                el.classList.remove('svg-element-highlight');
+            });
+            state.selectedElements.clear();
+            updatePropertiesPanel();
+            updateSelectionCount();
+        }
+
+        function selectAll() {
+            if (!state.svg) return;
+            state.svg.querySelectorAll('*').forEach(el => {
+                if (isSelectableElement(el)) {
+                    state.selectedElements.add(el);
+                    el.classList.add('svg-element-highlight');
+                }
+            });
+            updatePropertiesPanel();
+            updateSelectionCount();
+        }
+
+        // Tools
+        function setTool(tool) {
+            state.tool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tool-${tool}`)?.classList.add('active');
+            
+            elements.canvasContainer.style.cursor = tool === 'pan' ? 'grab' : 'default';
+            updateStatus(`Tool: ${tool.charAt(0).toUpperCase() + tool.slice(1)}`);
+        }
+
+        // Zoom and Pan
+        function setZoom(newZoom) {
+            const rect = elements.canvasContainer.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+
+            newZoom = Math.max(0.1, Math.min(10, newZoom));
+            const zoomRatio = newZoom / state.zoom;
+
+            state.pan.x = centerX - (centerX - state.pan.x) * zoomRatio;
+            state.pan.y = centerY - (centerY - state.pan.y) * zoomRatio;
+            state.zoom = newZoom;
+
+            updateTransform();
+            updateZoomDisplay();
+        }
+
+        function fitToView() {
+            if (!state.svg) return;
+
+            const containerRect = elements.canvasContainer.getBoundingClientRect();
+            const svgRect = state.svg.getBoundingClientRect();
+            
+            // Get SVG dimensions
+            const viewBox = state.svg.viewBox?.baseVal;
+            const svgWidth = viewBox?.width || parseFloat(state.svg.getAttribute('width')) || svgRect.width;
+            const svgHeight = viewBox?.height || parseFloat(state.svg.getAttribute('height')) || svgRect.height;
+
+            const scaleX = (containerRect.width - 100) / svgWidth;
+            const scaleY = (containerRect.height - 100) / svgHeight;
+            state.zoom = Math.min(scaleX, scaleY, 2);
+
+            state.pan.x = (containerRect.width - svgWidth * state.zoom) / 2;
+            state.pan.y = (containerRect.height - svgHeight * state.zoom) / 2;
+
+            updateTransform();
+            updateZoomDisplay();
+        }
+
+        function resetView() {
+            state.zoom = 1;
+            state.pan = { x: 50, y: 50 };
+            updateTransform();
+            updateZoomDisplay();
+        }
+
+        function updateTransform() {
+            if (state.svg) {
+                state.svg.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.zoom})`;
+            }
+            updateOriginMarker();
+            updateScaleIndicator();
+        }
+
+        function updateZoomDisplay() {
+            elements.zoomLevel.textContent = `${Math.round(state.zoom * 100)}%`;
+        }
+
+        // Coordinates
+        function updateCoordinates(e) {
+            const rect = elements.canvasContainer.getBoundingClientRect();
+            let x = (e.clientX - rect.left - state.pan.x) / state.zoom;
+            let y = (e.clientY - rect.top - state.pan.y) / state.zoom;
+
+            if (state.origin) {
+                x -= state.origin.x;
+                y -= state.origin.y;
+            }
+
+            if (state.scale) {
+                x /= state.scale;
+                y /= state.scale;
+                elements.coordX.textContent = x.toFixed(2) + 'm';
+                elements.coordY.textContent = y.toFixed(2) + 'm';
+            } else {
+                elements.coordX.textContent = Math.round(x) + 'px';
+                elements.coordY.textContent = Math.round(y) + 'px';
+            }
+        }
+
+        // Origin
+        function setOrigin(e) {
+            const rect = elements.canvasContainer.getBoundingClientRect();
+            const x = (e.clientX - rect.left - state.pan.x) / state.zoom;
+            const y = (e.clientY - rect.top - state.pan.y) / state.zoom;
+
+            state.origin = { x, y };
+            elements.metaOrigin.value = `(${Math.round(x)}, ${Math.round(y)})`;
+            
+            updateOriginMarker();
+            setTool('select');
+            updateStatus('Origin set');
+            saveState();
+        }
+
+        function updateOriginMarker() {
+            if (state.origin) {
+                elements.originMarker.style.display = 'block';
+                elements.originMarker.style.left = (state.origin.x * state.zoom + state.pan.x) + 'px';
+                elements.originMarker.style.top = (state.origin.y * state.zoom + state.pan.y) + 'px';
+            }
+        }
+
+        // Scale
+        function showScaleModal(element) {
+            state.scaleElement = element;
+            
+            // Show the element's current measured length
+            const measuredLength = getElementLength(element);
+            const lengthInfo = document.getElementById('scale-element-info');
+            if (lengthInfo) {
+                lengthInfo.textContent = `Element length: ${measuredLength.toFixed(2)} px (${element.tagName.toLowerCase()})`;
+            }
+            
+            elements.scaleModal.classList.add('visible');
+        }
+
+        // Get the actual length of an element (handles paths, lines, rects, etc.)
+        function getElementLength(element) {
+            const tagName = element.tagName.toLowerCase();
+            
+            // For path elements, use getTotalLength()
+            if (tagName === 'path' && element.getTotalLength) {
+                return element.getTotalLength();
+            }
+            
+            // For line elements, calculate distance
+            if (tagName === 'line') {
+                const x1 = parseFloat(element.getAttribute('x1')) || 0;
+                const y1 = parseFloat(element.getAttribute('y1')) || 0;
+                const x2 = parseFloat(element.getAttribute('x2')) || 0;
+                const y2 = parseFloat(element.getAttribute('y2')) || 0;
+                return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            }
+            
+            // For polyline/polygon, sum segment lengths
+            if (tagName === 'polyline' || tagName === 'polygon') {
+                const points = element.getAttribute('points');
+                if (points) {
+                    const coords = points.trim().split(/[\s,]+/).map(Number);
+                    let length = 0;
+                    for (let i = 2; i < coords.length; i += 2) {
+                        const dx = coords[i] - coords[i - 2];
+                        const dy = coords[i + 1] - coords[i - 1];
+                        length += Math.sqrt(dx * dx + dy * dy);
+                    }
+                    // Close polygon
+                    if (tagName === 'polygon' && coords.length >= 4) {
+                        const dx = coords[0] - coords[coords.length - 2];
+                        const dy = coords[1] - coords[coords.length - 1];
+                        length += Math.sqrt(dx * dx + dy * dy);
+                    }
+                    return length;
+                }
+            }
+            
+            // For rect, use the longer side (or perimeter could be an option)
+            if (tagName === 'rect') {
+                const width = parseFloat(element.getAttribute('width')) || 0;
+                const height = parseFloat(element.getAttribute('height')) || 0;
+                return Math.max(width, height);
+            }
+            
+            // For circle, use diameter
+            if (tagName === 'circle') {
+                const r = parseFloat(element.getAttribute('r')) || 0;
+                return r * 2;
+            }
+            
+            // For ellipse, use major axis
+            if (tagName === 'ellipse') {
+                const rx = parseFloat(element.getAttribute('rx')) || 0;
+                const ry = parseFloat(element.getAttribute('ry')) || 0;
+                return Math.max(rx, ry) * 2;
+            }
+            
+            // Fallback to bounding box diagonal
+            const bbox = element.getBBox();
+            return Math.max(bbox.width, bbox.height);
+        }
+
+        function setScale() {
+            if (!state.scaleElement) return;
+
+            const length = parseFloat(document.getElementById('scale-input').value);
+            const unit = document.getElementById('scale-unit').value;
+            
+            // Convert to meters
+            let meters = length;
+            switch (unit) {
+                case 'cm': meters = length / 100; break;
+                case 'mm': meters = length / 1000; break;
+                case 'ft': meters = length * 0.3048; break;
+                case 'in': meters = length * 0.0254; break;
+            }
+
+            // Get actual element length (not just bounding box)
+            const elementLength = getElementLength(state.scaleElement);
+
+            state.scale = elementLength / meters; // pixels per meter
+            state.scaleReferenceLength = elementLength; // store for display
+            state.scaleReferenceMeters = meters; // store the real-world value
+            state.scaleUnit = unit;
+            
+            elements.metaScale.value = `${state.scale.toFixed(2)} px/${unit === 'm' ? 'm' : unit}`;
+
+            // Mark the scale element
+            state.scaleElement.setAttribute('data-scale-reference', 'true');
+            state.scaleElement.setAttribute('data-scale-length', meters);
+            state.scaleElement.setAttribute('data-scale-unit', unit);
+            
+            updateScaleIndicator();
+            elements.scaleModal.classList.remove('visible');
+            setTool('select');
+            updateStatus(`Scale set: ${length}${unit} = ${elementLength.toFixed(1)}px`);
+            saveState();
+        }
+
+        function updateScaleIndicator() {
+            if (state.scale && state.scaleReferenceLength) {
+                elements.scaleIndicator.style.display = 'flex';
+                // Show the actual reference length at current zoom
+                const displayLength = state.scaleReferenceLength * state.zoom;
+                elements.scaleBar.style.width = displayLength + 'px';
+                
+                // Update label to show what this represents
+                const label = state.scaleReferenceMeters >= 1 
+                    ? `${state.scaleReferenceMeters}m`
+                    : `${(state.scaleReferenceMeters * 100).toFixed(0)}cm`;
+                elements.scaleLabel.textContent = label;
+            }
+        }
+
+        // Properties Panel
+        function updatePropertiesPanel() {
+            if (state.selectedElements.size === 0) {
+                elements.propertiesContent.innerHTML = '<div class="no-selection">Select an element to view properties</div>';
+                return;
+            }
+
+            if (state.selectedElements.size === 1) {
+                const el = Array.from(state.selectedElements)[0];
+                const metadata = state.elementMetadata.get(el.id) || { tags: [] };
+                
+                elements.propertiesContent.innerHTML = `
+                    <div class="property-row">
+                        <span class="property-label">ID</span>
+                        <input type="text" class="property-value" id="prop-id" value="${el.id || ''}">
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Type</span>
+                        <input type="text" class="property-value" value="${el.tagName}" readonly>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Fill</span>
+                        <input type="color" id="prop-fill" value="${rgbToHex(getComputedStyle(el).fill) || '#000000'}">
+                        <input type="text" class="property-value" id="prop-fill-hex" value="${rgbToHex(getComputedStyle(el).fill) || 'none'}" style="flex: 1;">
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Stroke</span>
+                        <input type="color" id="prop-stroke" value="${rgbToHex(getComputedStyle(el).stroke) || '#000000'}">
+                        <input type="text" class="property-value" id="prop-stroke-hex" value="${rgbToHex(getComputedStyle(el).stroke) || 'none'}" style="flex: 1;">
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <div class="section-title">Tags</div>
+                        <div class="tags-container" id="tags-container">
+                            ${metadata.tags.map((tag, i) => `
+                                <span class="tag">
+                                    ${tag}
+                                    <span class="tag-remove" data-index="${i}">×</span>
+                                </span>
+                            `).join('')}
+                        </div>
+                        <input type="text" class="add-tag-input" id="add-tag-input" placeholder="Add tag...">
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <div class="section-title">Custom Data</div>
+                        <div class="property-row">
+                            <span class="property-label">data-zone</span>
+                            <input type="text" class="property-value" id="prop-data-zone" value="${el.getAttribute('data-zone') || ''}">
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">data-type</span>
+                            <input type="text" class="property-value" id="prop-data-type" value="${el.getAttribute('data-type') || ''}">
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">data-layer</span>
+                            <input type="text" class="property-value" id="prop-data-layer" value="${el.getAttribute('data-layer') || ''}">
+                        </div>
+                    </div>
+                `;
+
+                // Setup property change handlers
+                setupPropertyHandlers(el);
+            } else {
+                elements.propertiesContent.innerHTML = `
+                    <div class="property-row">
+                        <span class="property-label">Selected</span>
+                        <span class="property-value">${state.selectedElements.size} elements</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Fill</span>
+                        <input type="color" id="prop-fill-multi" value="#000000">
+                        <button class="btn" id="apply-fill-multi" style="margin-left: 8px;">Apply</button>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <div class="section-title">Batch Tag</div>
+                        <input type="text" class="add-tag-input" id="add-tag-multi" placeholder="Add tag to all...">
+                    </div>
+                `;
+
+                // Multi-select handlers
+                document.getElementById('apply-fill-multi')?.addEventListener('click', () => {
+                    const color = document.getElementById('prop-fill-multi').value;
+                    state.selectedElements.forEach(el => el.setAttribute('fill', color));
+                    saveState();
+                });
+
+                document.getElementById('add-tag-multi')?.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                        state.selectedElements.forEach(el => {
+                            const metadata = state.elementMetadata.get(el.id) || { tags: [] };
+                            if (!metadata.tags.includes(e.target.value.trim())) {
+                                metadata.tags.push(e.target.value.trim());
+                                state.elementMetadata.set(el.id, metadata);
+                            }
+                        });
+                        e.target.value = '';
+                        saveState();
+                    }
+                });
+            }
+        }
+
+        function setupPropertyHandlers(el) {
+            // ID change
+            document.getElementById('prop-id')?.addEventListener('change', (e) => {
+                const oldId = el.id;
+                el.id = e.target.value;
+                // Transfer metadata
+                if (state.elementMetadata.has(oldId)) {
+                    state.elementMetadata.set(el.id, state.elementMetadata.get(oldId));
+                    state.elementMetadata.delete(oldId);
+                }
+                updateElementList();
+                saveState();
+            });
+
+            // Fill color
+            document.getElementById('prop-fill')?.addEventListener('input', (e) => {
+                el.setAttribute('fill', e.target.value);
+                document.getElementById('prop-fill-hex').value = e.target.value;
+            });
+            document.getElementById('prop-fill-hex')?.addEventListener('change', (e) => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                    el.setAttribute('fill', e.target.value);
+                    document.getElementById('prop-fill').value = e.target.value;
+                }
+                saveState();
+            });
+
+            // Stroke color
+            document.getElementById('prop-stroke')?.addEventListener('input', (e) => {
+                el.setAttribute('stroke', e.target.value);
+                document.getElementById('prop-stroke-hex').value = e.target.value;
+            });
+            document.getElementById('prop-stroke-hex')?.addEventListener('change', (e) => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                    el.setAttribute('stroke', e.target.value);
+                    document.getElementById('prop-stroke').value = e.target.value;
+                }
+                saveState();
+            });
+
+            // Tags
+            document.getElementById('add-tag-input')?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && e.target.value.trim()) {
+                    const metadata = state.elementMetadata.get(el.id) || { tags: [] };
+                    metadata.tags.push(e.target.value.trim());
+                    state.elementMetadata.set(el.id, metadata);
+                    e.target.value = '';
+                    updatePropertiesPanel();
+                    saveState();
+                }
+            });
+
+            document.querySelectorAll('.tag-remove').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const metadata = state.elementMetadata.get(el.id);
+                    metadata.tags.splice(index, 1);
+                    updatePropertiesPanel();
+                    saveState();
+                });
+            });
+
+            // Custom data attributes
+            ['zone', 'type', 'layer'].forEach(attr => {
+                document.getElementById(`prop-data-${attr}`)?.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        el.setAttribute(`data-${attr}`, e.target.value);
+                    } else {
+                        el.removeAttribute(`data-${attr}`);
+                    }
+                    saveState();
+                });
+            });
+        }
+
+        // Element List
+        function updateElementList() {
+            if (!state.svg) {
+                elements.elementList.innerHTML = '';
+                elements.elementCount.textContent = '0 elements';
+                return;
+            }
+
+            const selectableElements = Array.from(state.svg.querySelectorAll('*')).filter(isSelectableElement);
+            
+            elements.elementList.innerHTML = selectableElements.map(el => `
+                <div class="element-item${state.selectedElements.has(el) ? ' selected' : ''}" data-id="${el.id}">
+                    <span class="element-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            ${getElementIcon(el.tagName)}
+                        </svg>
+                    </span>
+                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis;">${el.id || 'unnamed'}</span>
+                    <span class="element-type">${el.tagName}</span>
+                </div>
+            `).join('');
+
+            elements.elementCount.textContent = `${selectableElements.length} elements`;
+
+            // Add click handlers
+            document.querySelectorAll('.element-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const el = state.svg.getElementById(item.dataset.id);
+                    if (el) selectElement(el);
+                });
+            });
+        }
+
+        function highlightElementInList(el) {
+            document.querySelectorAll('.element-item').forEach(item => {
+                item.classList.toggle('selected', item.dataset.id === el.id);
+            });
+        }
+
+        function getElementIcon(tagName) {
+            switch (tagName.toLowerCase()) {
+                case 'rect': return '<rect x="3" y="3" width="18" height="18" rx="2"/>';
+                case 'circle': return '<circle cx="12" cy="12" r="9"/>';
+                case 'ellipse': return '<ellipse cx="12" cy="12" rx="10" ry="6"/>';
+                case 'line': return '<line x1="4" y1="20" x2="20" y2="4"/>';
+                case 'path': return '<path d="M4 20c4-8 12-12 16-12"/>';
+                case 'polygon': case 'polyline': return '<polygon points="12,2 22,22 2,22"/>';
+                case 'g': return '<rect x="2" y="2" width="8" height="8"/><rect x="14" y="14" width="8" height="8"/>';
+                case 'text': return '<text x="4" y="18" font-size="14">T</text>';
+                default: return '<rect x="3" y="3" width="18" height="18"/>';
+            }
+        }
+
+        // Groups
+        function showGroupModal() {
+            document.getElementById('group-name-input').value = '';
+            document.getElementById('group-color-input').value = getRandomColor();
+            document.getElementById('group-color-hex').value = document.getElementById('group-color-input').value;
+            elements.groupModal.classList.add('visible');
+        }
+
+        function createGroup() {
+            const name = document.getElementById('group-name-input').value.trim();
+            const color = document.getElementById('group-color-hex').value;
+
+            if (!name) {
+                alert('Please enter a group name');
+                return;
+            }
+
+            const group = {
+                id: 'group-' + Date.now(),
+                name,
+                color,
+                elements: []
+            };
+
+            // Add selected elements to group
+            state.selectedElements.forEach(el => {
+                group.elements.push(el.id);
+                el.setAttribute('data-group', group.id);
+            });
+
+            state.groups.push(group);
+            updateGroupsList();
+            elements.groupModal.classList.remove('visible');
+            saveState();
+        }
+
+        function updateGroupsList() {
+            elements.groupsList.innerHTML = state.groups.map(group => `
+                <div class="group-item" data-id="${group.id}">
+                    <span class="group-color" style="background: ${group.color}"></span>
+                    <span class="group-name">${group.name}</span>
+                    <span class="group-count">${group.elements.length}</span>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.group-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const group = state.groups.find(g => g.id === item.dataset.id);
+                    if (group) selectGroup(group);
+                });
+            });
+        }
+
+        function selectGroup(group) {
+            deselectAll();
+            group.elements.forEach(id => {
+                const el = state.svg?.getElementById(id);
+                if (el) {
+                    state.selectedElements.add(el);
+                    el.classList.add('svg-element-highlight');
+                }
+            });
+            updatePropertiesPanel();
+            updateSelectionCount();
+        }
+
+        // Context Menu
+        function showContextMenu(x, y) {
+            elements.contextMenu.style.left = x + 'px';
+            elements.contextMenu.style.top = y + 'px';
+            elements.contextMenu.classList.add('visible');
+        }
+
+        function hideContextMenu() {
+            elements.contextMenu.classList.remove('visible');
+        }
+
+        function handleContextMenuAction(e) {
+            const action = e.currentTarget.dataset.action;
+            
+            switch (action) {
+                case 'tag':
+                    const tag = prompt('Enter tag:');
+                    if (tag) {
+                        state.selectedElements.forEach(el => {
+                            const metadata = state.elementMetadata.get(el.id) || { tags: [] };
+                            if (!metadata.tags.includes(tag)) {
+                                metadata.tags.push(tag);
+                                state.elementMetadata.set(el.id, metadata);
+                            }
+                        });
+                        updatePropertiesPanel();
+                        saveState();
+                    }
+                    break;
+                case 'color':
+                    // Color will be handled in properties panel
+                    break;
+                case 'set-origin':
+                    const el = Array.from(state.selectedElements)[0];
+                    if (el) {
+                        const bbox = el.getBBox();
+                        state.origin = { x: bbox.x, y: bbox.y };
+                        elements.metaOrigin.value = `(${Math.round(bbox.x)}, ${Math.round(bbox.y)})`;
+                        updateOriginMarker();
+                        updateStatus('Origin set to element position');
+                        saveState();
+                    }
+                    break;
+                case 'set-scale':
+                    showScaleModal(Array.from(state.selectedElements)[0]);
+                    break;
+                case 'group':
+                    if (state.groups.length === 0) {
+                        showGroupModal();
+                    } else {
+                        const groupName = prompt('Enter group name (or select existing):\n' + 
+                            state.groups.map(g => g.name).join(', '));
+                        let group = state.groups.find(g => g.name === groupName);
+                        if (!group && groupName) {
+                            group = { id: 'group-' + Date.now(), name: groupName, color: getRandomColor(), elements: [] };
+                            state.groups.push(group);
+                        }
+                        if (group) {
+                            state.selectedElements.forEach(el => {
+                                if (!group.elements.includes(el.id)) {
+                                    group.elements.push(el.id);
+                                    el.setAttribute('data-group', group.id);
+                                }
+                            });
+                            updateGroupsList();
+                            saveState();
+                        }
+                    }
+                    break;
+                case 'remove-group':
+                    state.selectedElements.forEach(el => {
+                        const groupId = el.getAttribute('data-group');
+                        if (groupId) {
+                            const group = state.groups.find(g => g.id === groupId);
+                            if (group) {
+                                group.elements = group.elements.filter(id => id !== el.id);
+                            }
+                            el.removeAttribute('data-group');
+                        }
+                    });
+                    updateGroupsList();
+                    saveState();
+                    break;
+                case 'copy-id':
+                    const ids = Array.from(state.selectedElements).map(el => el.id).join(', ');
+                    navigator.clipboard.writeText(ids);
+                    updateStatus('ID copied to clipboard');
+                    break;
+            }
+
+            hideContextMenu();
+        }
+
+        // Modal Handlers
+        function setupModalHandlers() {
+            document.getElementById('scale-cancel').addEventListener('click', () => {
+                elements.scaleModal.classList.remove('visible');
+            });
+            document.getElementById('scale-confirm').addEventListener('click', setScale);
+
+            document.getElementById('group-cancel').addEventListener('click', () => {
+                elements.groupModal.classList.remove('visible');
+            });
+            document.getElementById('group-confirm').addEventListener('click', createGroup);
+        }
+
+        // Documentation Event Listeners
+        function setupDocsEventListeners() {
+            document.getElementById('open-docs-btn').addEventListener('click', openDocsModal);
+            document.getElementById('docs-cancel').addEventListener('click', () => {
+                elements.docsModal.classList.remove('visible');
+            });
+            document.getElementById('docs-save').addEventListener('click', saveDocsAndClose);
+            document.getElementById('docs-preview').addEventListener('click', previewMarkdown);
+            document.getElementById('add-element-type-btn').addEventListener('click', addElementTypeRow);
+            
+            document.getElementById('preview-close').addEventListener('click', () => {
+                elements.previewModal.classList.remove('visible');
+            });
+            document.getElementById('preview-copy').addEventListener('click', () => {
+                const markdown = document.getElementById('markdown-preview').textContent;
+                navigator.clipboard.writeText(markdown);
+                updateStatus('Markdown copied to clipboard');
+            });
+        }
+
+        function openDocsModal() {
+            // Populate fields from state
+            document.getElementById('doc-project-name').value = state.docs.projectName;
+            document.getElementById('doc-project-desc').value = state.docs.projectDesc;
+            document.getElementById('doc-coords').value = state.docs.coordSystem;
+            document.getElementById('doc-tracking-method').value = state.docs.trackingMethod;
+            document.getElementById('doc-tracking-details').value = state.docs.trackingDetails;
+            document.getElementById('doc-interactions').value = state.docs.interactions;
+            document.getElementById('doc-data-structures').value = state.docs.dataStructures;
+            document.getElementById('doc-panel-protocol').value = state.docs.panelProtocol;
+            document.getElementById('doc-panel-details').value = state.docs.panelDetails;
+            document.getElementById('doc-additional').value = state.docs.additionalNotes;
+
+            // Populate element types
+            populateElementTypes();
+            
+            // Populate zones from SVG
+            populateZoneDefinitions();
+
+            elements.docsModal.classList.add('visible');
+        }
+
+        function populateElementTypes() {
+            const container = document.getElementById('element-type-definitions');
+            
+            // Get unique data-type values from SVG
+            const existingTypes = new Set();
+            if (state.svg) {
+                state.svg.querySelectorAll('[data-type]').forEach(el => {
+                    existingTypes.add(el.getAttribute('data-type'));
+                });
+            }
+
+            // Merge with saved element types
+            const allTypes = [...state.docs.elementTypes];
+            existingTypes.forEach(type => {
+                if (!allTypes.find(t => t.name === type)) {
+                    allTypes.push({ name: type, description: '', addressingNotes: '' });
+                }
+            });
+
+            // Add some common defaults if empty
+            if (allTypes.length === 0) {
+                allTypes.push(
+                    { name: 'zone', description: '', addressingNotes: '' },
+                    { name: 'panel', description: '', addressingNotes: '' },
+                    { name: 'architecture', description: '', addressingNotes: '' }
+                );
+            }
+
+            container.innerHTML = allTypes.map((type, i) => `
+                <div class="element-type-row" data-index="${i}">
+                    <input type="text" class="property-value element-type-name" value="${type.name}" placeholder="Type name">
+                    <textarea class="docs-textarea element-type-desc" placeholder="Description: What does this type represent? How should code address these elements?">${type.description}</textarea>
+                    <button class="btn btn-icon remove-element-type" data-index="${i}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+
+            // Add remove handlers
+            container.querySelectorAll('.remove-element-type').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.target.closest('.element-type-row').remove();
+                });
+            });
+        }
+
+        function addElementTypeRow() {
+            const container = document.getElementById('element-type-definitions');
+            const index = container.children.length;
+            const row = document.createElement('div');
+            row.className = 'element-type-row';
+            row.dataset.index = index;
+            row.innerHTML = `
+                <input type="text" class="property-value element-type-name" value="" placeholder="Type name">
+                <textarea class="docs-textarea element-type-desc" placeholder="Description: What does this type represent? How should code address these elements?"></textarea>
+                <button class="btn btn-icon remove-element-type" data-index="${index}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            row.querySelector('.remove-element-type').addEventListener('click', () => row.remove());
+            container.appendChild(row);
+        }
+
+        function populateZoneDefinitions() {
+            const container = document.getElementById('zone-definitions');
+            
+            // Get unique data-zone values from SVG
+            const zones = new Set();
+            if (state.svg) {
+                state.svg.querySelectorAll('[data-zone]').forEach(el => {
+                    zones.add(el.getAttribute('data-zone'));
+                });
+            }
+
+            // Also check for zone IDs
+            if (state.svg) {
+                state.svg.querySelectorAll('[id*="zone"]').forEach(el => {
+                    zones.add(el.id);
+                });
+            }
+
+            if (zones.size === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">No zones detected. Add data-zone attributes to elements or include "zone" in element IDs.</p>';
+                return;
+            }
+
+            container.innerHTML = Array.from(zones).sort().map(zone => `
+                <div class="zone-def-row">
+                    <div class="zone-label">${zone}</div>
+                    <textarea class="docs-textarea zone-desc" data-zone="${zone}" placeholder="Describe this zone's purpose, expected interactions, and any special behaviors...">${state.docs.zones[zone] || ''}</textarea>
+                </div>
+            `).join('');
+        }
+
+        function saveDocsAndClose() {
+            // Gather all documentation values
+            state.docs.projectName = document.getElementById('doc-project-name').value;
+            state.docs.projectDesc = document.getElementById('doc-project-desc').value;
+            state.docs.coordSystem = document.getElementById('doc-coords').value;
+            state.docs.trackingMethod = document.getElementById('doc-tracking-method').value;
+            state.docs.trackingDetails = document.getElementById('doc-tracking-details').value;
+            state.docs.interactions = document.getElementById('doc-interactions').value;
+            state.docs.dataStructures = document.getElementById('doc-data-structures').value;
+            state.docs.panelProtocol = document.getElementById('doc-panel-protocol').value;
+            state.docs.panelDetails = document.getElementById('doc-panel-details').value;
+            state.docs.additionalNotes = document.getElementById('doc-additional').value;
+
+            // Gather element types
+            state.docs.elementTypes = [];
+            document.querySelectorAll('.element-type-row').forEach(row => {
+                const name = row.querySelector('.element-type-name').value.trim();
+                const desc = row.querySelector('.element-type-desc').value.trim();
+                if (name) {
+                    state.docs.elementTypes.push({ name, description: desc });
+                }
+            });
+
+            // Gather zone descriptions
+            state.docs.zones = {};
+            document.querySelectorAll('.zone-desc').forEach(textarea => {
+                const zone = textarea.dataset.zone;
+                const desc = textarea.value.trim();
+                if (desc) {
+                    state.docs.zones[zone] = desc;
+                }
+            });
+
+            elements.docsModal.classList.remove('visible');
+            updateStatus('Documentation saved');
+        }
+
+        function generateMarkdown() {
+            const units = document.getElementById('meta-units').value;
+            
+            let md = `# ${state.docs.projectName || 'Installation Plan'}\n\n`;
+            
+            if (state.docs.projectDesc) {
+                md += `## Overview\n\n${state.docs.projectDesc}\n\n`;
+            }
+
+            // Spatial Configuration
+            md += `## Spatial Configuration\n\n`;
+            
+            if (state.origin) {
+                md += `**Origin:** (${state.origin.x.toFixed(1)}, ${state.origin.y.toFixed(1)}) in SVG coordinates\n\n`;
+            }
+            
+            if (state.scale) {
+                const pxPerUnit = state.scale;
+                md += `**Scale:** 1 ${units} = ${pxPerUnit.toFixed(2)} px\n\n`;
+            }
+            
+            if (state.docs.coordSystem) {
+                md += `### Coordinate System\n\n${state.docs.coordSystem}\n\n`;
+            }
+
+            // Tracking System
+            if (state.docs.trackingMethod || state.docs.trackingDetails) {
+                md += `## Tracking System\n\n`;
+                if (state.docs.trackingMethod) {
+                    md += `**Method:** ${state.docs.trackingMethod}\n\n`;
+                }
+                if (state.docs.trackingDetails) {
+                    md += `${state.docs.trackingDetails}\n\n`;
+                }
+            }
+
+            // Element Types
+            if (state.docs.elementTypes.length > 0) {
+                md += `## Element Types\n\n`;
+                state.docs.elementTypes.forEach(type => {
+                    md += `### \`${type.name}\`\n\n`;
+                    if (type.description) {
+                        md += `${type.description}\n\n`;
+                    }
+                });
+            }
+
+            // Zones
+            const zoneKeys = Object.keys(state.docs.zones);
+            if (zoneKeys.length > 0) {
+                md += `## Zones\n\n`;
+                zoneKeys.sort().forEach(zone => {
+                    md += `### ${zone}\n\n${state.docs.zones[zone]}\n\n`;
+                });
+            }
+
+            // Element Inventory
+            if (state.svg) {
+                md += `## Element Inventory\n\n`;
+                md += `| ID | Type | data-type | data-zone | Tags |\n`;
+                md += `|----|------|-----------|-----------|------|\n`;
+                
+                state.svg.querySelectorAll('*').forEach(el => {
+                    if (isSelectableElement(el) && el.id) {
+                        const metadata = state.elementMetadata.get(el.id) || { tags: [] };
+                        const dataType = el.getAttribute('data-type') || '';
+                        const dataZone = el.getAttribute('data-zone') || '';
+                        const tags = metadata.tags.join(', ');
+                        md += `| ${el.id} | ${el.tagName} | ${dataType} | ${dataZone} | ${tags} |\n`;
+                    }
+                });
+                md += `\n`;
+            }
+
+            // Groups
+            if (state.groups.length > 0) {
+                md += `## Groups\n\n`;
+                state.groups.forEach(group => {
+                    md += `### ${group.name}\n\n`;
+                    md += `**Color:** ${group.color}\n\n`;
+                    md += `**Elements:** ${group.elements.join(', ')}\n\n`;
+                });
+            }
+
+            // Interaction Rules
+            if (state.docs.interactions) {
+                md += `## Interaction Rules\n\n${state.docs.interactions}\n\n`;
+            }
+
+            // Data Structures
+            if (state.docs.dataStructures) {
+                md += `## Data Structures\n\n\`\`\`javascript\n${state.docs.dataStructures}\n\`\`\`\n\n`;
+            }
+
+            // Panel Control
+            if (state.docs.panelProtocol || state.docs.panelDetails) {
+                md += `## Panel Control Interface\n\n`;
+                if (state.docs.panelProtocol) {
+                    md += `**Protocol:** ${state.docs.panelProtocol}\n\n`;
+                }
+                if (state.docs.panelDetails) {
+                    md += `${state.docs.panelDetails}\n\n`;
+                }
+            }
+
+            // Additional Notes
+            if (state.docs.additionalNotes) {
+                md += `## Additional Notes\n\n${state.docs.additionalNotes}\n\n`;
+            }
+
+            // SVG Reference
+            md += `---\n\n`;
+            md += `*This documentation accompanies the SVG file. Load both files together for full context.*\n`;
+
+            return md;
+        }
+
+        function previewMarkdown() {
+            saveDocsAndClose();
+            elements.docsModal.classList.remove('visible');
+            
+            const markdown = generateMarkdown();
+            document.getElementById('markdown-preview').textContent = markdown;
+            elements.previewModal.classList.add('visible');
+        }
+
+        // Keyboard Shortcuts
+        function handleKeyboard(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            switch (e.key.toLowerCase()) {
+                case 'v': setTool('select'); break;
+                case 'h': setTool('pan'); break;
+                case 'o': setTool('origin'); break;
+                case 's': 
+                    if (e.ctrlKey || e.metaKey) { 
+                        e.preventDefault(); 
+                        saveProject(); 
+                    } else {
+                        setTool('scale'); 
+                    }
+                    break;
+                case 'm': setTool('measure'); break;
+                case 'r': setTool('rect-select'); break;
+                case 'g': if (!e.ctrlKey && !e.metaKey) setTool('group'); break;
+                case 'u': setTool('ungroup'); break;
+                case 'escape': deselectAll(); hideContextMenu(); break;
+                case 'a': if (e.ctrlKey || e.metaKey) { e.preventDefault(); selectAll(); } break;
+                case 'z': if (e.ctrlKey || e.metaKey) { e.preventDefault(); undo(); } break;
+                case 'y': if (e.ctrlKey || e.metaKey) { e.preventDefault(); redo(); } break;
+                case 'delete': case 'backspace': 
+                    if (state.selectedElements.size > 0 && !e.target.matches('input')) {
+                        e.preventDefault();
+                        // Don't actually delete, just deselect
+                        deselectAll();
+                    }
+                    break;
+            }
+        }
+
+        // Auto-detect elements
+        function autoDetectElements() {
+            if (!state.svg) return;
+
+            let detected = { zones: 0, panels: 0, architecture: 0 };
+
+            state.svg.querySelectorAll('*').forEach(el => {
+                if (!isSelectableElement(el)) return;
+
+                const fill = getComputedStyle(el).fill;
+                const id = el.id?.toLowerCase() || '';
+                const tagName = el.tagName.toLowerCase();
+
+                // Try to auto-classify based on common patterns
+                if (id.includes('zone') || id.includes('area')) {
+                    el.setAttribute('data-type', 'zone');
+                    detected.zones++;
+                } else if (id.includes('panel') || id.includes('light')) {
+                    el.setAttribute('data-type', 'panel');
+                    detected.panels++;
+                } else if (id.includes('column') || id.includes('mullion') || id.includes('wall')) {
+                    el.setAttribute('data-type', 'architecture');
+                    detected.architecture++;
+                }
+            });
+
+            updateElementList();
+            updateStatus(`Auto-detected: ${detected.zones} zones, ${detected.panels} panels, ${detected.architecture} architecture`);
+        }
+
+        // Undo/Redo
+        function saveState() {
+            state.undoStack.push({
+                svgContent: state.svg?.outerHTML,
+                metadata: new Map(state.elementMetadata),
+                groups: JSON.parse(JSON.stringify(state.groups)),
+                origin: state.origin ? { ...state.origin } : null,
+                scale: state.scale
+            });
+            state.redoStack = [];
+        }
+
+        function undo() {
+            if (state.undoStack.length > 0) {
+                const current = {
+                    svgContent: state.svg?.outerHTML,
+                    metadata: new Map(state.elementMetadata),
+                    groups: JSON.parse(JSON.stringify(state.groups)),
+                    origin: state.origin ? { ...state.origin } : null,
+                    scale: state.scale
+                };
+                state.redoStack.push(current);
+                
+                const prev = state.undoStack.pop();
+                restoreState(prev);
+                updateStatus('Undo');
+            }
+        }
+
+        function redo() {
+            if (state.redoStack.length > 0) {
+                const current = {
+                    svgContent: state.svg?.outerHTML,
+                    metadata: new Map(state.elementMetadata),
+                    groups: JSON.parse(JSON.stringify(state.groups)),
+                    origin: state.origin ? { ...state.origin } : null,
+                    scale: state.scale
+                };
+                state.undoStack.push(current);
+                
+                const next = state.redoStack.pop();
+                restoreState(next);
+                updateStatus('Redo');
+            }
+        }
+
+        function restoreState(savedState) {
+            if (savedState.svgContent) {
+                state.svgContent = savedState.svgContent;
+                renderSVG();
+            }
+            state.elementMetadata = savedState.metadata;
+            state.groups = savedState.groups;
+            state.origin = savedState.origin;
+            state.scale = savedState.scale;
+            
+            updateGroupsList();
+            updateOriginMarker();
+            updateScaleIndicator();
+            
+            if (state.origin) {
+                elements.metaOrigin.value = `(${Math.round(state.origin.x)}, ${Math.round(state.origin.y)})`;
+            }
+            if (state.scale) {
+                elements.metaScale.value = `${(1/state.scale * 100).toFixed(2)} px/m`;
+            }
+        }
+
+        // Save/Load Project
+        function saveProject() {
+            const projectData = {
+                version: '1.0',
+                timestamp: new Date().toISOString(),
+                svgContent: state.svg ? state.svg.outerHTML : state.svgContent,
+                origin: state.origin,
+                scale: state.scale,
+                scaleReferenceLength: state.scaleReferenceLength,
+                scaleReferenceMeters: state.scaleReferenceMeters,
+                scaleUnit: state.scaleUnit,
+                groups: state.groups,
+                elementMetadata: Array.from(state.elementMetadata.entries()),
+                docs: state.docs,
+                units: document.getElementById('meta-units').value
+            };
+
+            const projectName = state.docs.projectName 
+                ? state.docs.projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+                : 'svg-project';
+
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${projectName}.json`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            updateStatus('Project saved');
+        }
+
+        function loadProject(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const projectData = JSON.parse(event.target.result);
+                    
+                    // Validate version
+                    if (!projectData.version) {
+                        throw new Error('Invalid project file');
+                    }
+
+                    // Restore SVG
+                    if (projectData.svgContent) {
+                        state.svgContent = projectData.svgContent;
+                        renderSVG();
+                    }
+
+                    // Restore origin
+                    state.origin = projectData.origin;
+                    if (state.origin) {
+                        elements.metaOrigin.value = `(${Math.round(state.origin.x)}, ${Math.round(state.origin.y)})`;
+                        updateOriginMarker();
+                    }
+
+                    // Restore scale
+                    state.scale = projectData.scale;
+                    state.scaleReferenceLength = projectData.scaleReferenceLength;
+                    state.scaleReferenceMeters = projectData.scaleReferenceMeters;
+                    state.scaleUnit = projectData.scaleUnit || 'm';
+                    if (state.scale) {
+                        elements.metaScale.value = `${state.scale.toFixed(2)} px/${state.scaleUnit}`;
+                        updateScaleIndicator();
+                    }
+
+                    // Restore groups
+                    state.groups = projectData.groups || [];
+                    updateGroupsList();
+
+                    // Restore element metadata
+                    state.elementMetadata = new Map(projectData.elementMetadata || []);
+
+                    // Restore documentation
+                    state.docs = projectData.docs || state.docs;
+
+                    // Restore units
+                    if (projectData.units) {
+                        document.getElementById('meta-units').value = projectData.units;
+                    }
+
+                    updateStatus(`Project loaded: ${file.name}`);
+                    fitToView();
+
+                } catch (err) {
+                    console.error('Error loading project:', err);
+                    alert('Failed to load project file. Please check the file format.');
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset input so same file can be loaded again
+            e.target.value = '';
+        }
+
+        // Export
+        function exportSVG() {
+            if (!state.svg) {
+                alert('No SVG loaded');
+                return;
+            }
+
+            // Clone the SVG
+            const clone = state.svg.cloneNode(true);
+
+            // Remove highlight classes
+            clone.querySelectorAll('.svg-element-highlight, .svg-element-hover').forEach(el => {
+                el.classList.remove('svg-element-highlight', 'svg-element-hover');
+            });
+
+            // Add metadata as data attributes
+            clone.setAttribute('data-annotator-version', '1.0');
+            
+            if (state.origin) {
+                clone.setAttribute('data-origin-x', state.origin.x);
+                clone.setAttribute('data-origin-y', state.origin.y);
+            }
+            
+            if (state.scale) {
+                clone.setAttribute('data-scale-px-per-meter', state.scale);
+            }
+
+            // Add element metadata
+            state.elementMetadata.forEach((metadata, id) => {
+                const el = clone.getElementById(id);
+                if (el && metadata.tags.length > 0) {
+                    el.setAttribute('data-tags', metadata.tags.join(','));
+                }
+            });
+
+            // Add groups info
+            if (state.groups.length > 0) {
+                const groupsData = state.groups.map(g => ({
+                    id: g.id,
+                    name: g.name,
+                    color: g.color,
+                    elements: g.elements
+                }));
+                clone.setAttribute('data-groups', JSON.stringify(groupsData));
+            }
+
+            // Create project name for filenames
+            const projectName = state.docs.projectName 
+                ? state.docs.projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+                : 'annotated-plan';
+
+            // Export SVG
+            const svgData = new XMLSerializer().serializeToString(clone);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
+            const svgUrl = URL.createObjectURL(svgBlob);
+            
+            const svgLink = document.createElement('a');
+            svgLink.href = svgUrl;
+            svgLink.download = `${projectName}.svg`;
+            svgLink.click();
+            URL.revokeObjectURL(svgUrl);
+
+            // Export Markdown documentation
+            const markdown = generateMarkdown();
+            const mdBlob = new Blob([markdown], { type: 'text/markdown' });
+            const mdUrl = URL.createObjectURL(mdBlob);
+            
+            const mdLink = document.createElement('a');
+            mdLink.href = mdUrl;
+            mdLink.download = `${projectName}-context.md`;
+            
+            // Small delay to ensure both downloads trigger
+            setTimeout(() => {
+                mdLink.click();
+                URL.revokeObjectURL(mdUrl);
+            }, 100);
+
+            updateStatus('Exported SVG and documentation');
+        }
+
+        // Utilities
+        function updateStatus(text) {
+            elements.statusText.textContent = text;
+        }
+
+        function updateSelectionCount() {
+            elements.selectionCount.textContent = `${state.selectedElements.size} selected`;
+        }
+
+        function rgbToHex(rgb) {
+            if (!rgb || rgb === 'none') return null;
+            const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!match) return rgb.startsWith('#') ? rgb : null;
+            return '#' + [match[1], match[2], match[3]].map(x => {
+                const hex = parseInt(x).toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+        }
+
+        function getRandomColor() {
+            const colors = ['#E63946', '#F4A261', '#E9C46A', '#2A9D8F', '#264653', '#8338EC', '#3A86FF', '#06D6A0', '#FF006E'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
